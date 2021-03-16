@@ -21,6 +21,9 @@ class Main:
         self.left_y6 = -0.032
         self.left_z_free = 0.05
 
+        self.start_time = 0.0
+        self.end_time = 0.0
+
         self.string_heights = [0.01193, 0.01268, 0.01332, 0.01330, 0.01317, 0.01296]
         for i in range(len(self.string_heights)):
             self.string_heights[i] = self.string_heights[i] - self.string_heights[5] + 0.0439
@@ -33,17 +36,19 @@ class Main:
 
         dis_string = 0.05292 / 5
         self.right_strings = [dis_string * 5, dis_string * 4, dis_string * 3, dis_string * 2, dis_string * 1, 0]
+        self.left_z_pressed = 0.022
 
     def init_start(self):
         feedback = rospy.wait_for_message("/" + self.right_arm.robot_name + "/base_feedback", BaseCyclic_Feedback)
         self.right_x6 = feedback.base.commanded_tool_pose_x
         self.right_y6 = feedback.base.commanded_tool_pose_y
-        self.right_z_free = 0.05
+        self.right_z_free = 0.052
 
         feedback = rospy.wait_for_message("/" + self.left_arm.robot_name + "/base_feedback", BaseCyclic_Feedback)
         self.left_x6 = feedback.base.commanded_tool_pose_x
         self.left_y6 = feedback.base.commanded_tool_pose_y
         self.left_z_free = 0.035
+        self.left_z_pressed = 0.026
 
     def finished(self):
         left_x, left_y, left_z = self.left_arm.get_pose()
@@ -56,11 +61,11 @@ class Main:
         right_idx = 0
         left_state = 0
         right_state = 0
-        while True:
-            if left_state == 0:
+        while left_idx < left_len or right_idx < right_len:
+            if left_state == 0 and left_idx < left_len:
                 self.left_arm.go_to_pose(left_x[left_idx], left_y[left_idx], left_z[left_idx])
                 left_state = 1
-            if right_state == 0:
+            if right_state == 0 and right_idx < right_len:
                 self.right_arm.go_to_pose(right_x[right_idx], right_y[right_idx], right_z[right_idx])
                 right_state = 1
 
@@ -68,12 +73,14 @@ class Main:
             if left_res and left_state == 1:
                 left_state = 0
                 left_idx += 1
+                rospy.loginfo("LEFT ACTION END")
                 if left_idx >= left_len:
                     left_state = 2
                     rospy.loginfo("LEFT ARM FINISHED")
             if right_res and right_state == 1:
                 right_state = 0
                 right_idx += 1
+                rospy.loginfo("RIGHT ACTION END")
                 if right_idx >= right_len:
                     right_state = 2
                     rospy.loginfo("RIGHT ARM FINISHED")
@@ -89,42 +96,52 @@ class Main:
         right_ey = self.right_y6 + (self.right_strings[string - 1] + right_dis_end) / 1.414
 
         if left_grade > 0:
+
+            right_delta_z = 0.0000
             right_xs = [right_sx, right_sx]
             right_ys = [right_sy, right_sy]
-            right_zs = [self.right_z_free, self.right_z[string - 1]]
+            right_zs = [self.right_z_free, self.right_z[string - 1] - right_delta_z]
 
-            self.right_arm.go_to_pose(right_sx, right_sy, self.right_z_free)
-            left_x, left_y, left_z = self.left_arm.get_pose()
-            self.left_arm.go_to_pose(left_x, left_y, self.left_z_free)
-
-            left_xs = [left_x]
-            left_ys = [left_y]
-            left_zs = [left_z]
-
-            left_x = self.left_x6 + ((self.left_grades[left_grade - 1] - 0.005) / 1.4142) - (
-                    self.left_strings[string - 1] / 1.4142)
-            left_y = self.left_y6 + ((self.left_grades[left_grade - 1] - 0.005) / 1.4142) + (
-                    self.left_strings[string - 1] / 1.4142)
-
-            self.left_arm.go_to_pose(left_x, left_y, self.left_z_free)
-
-            self.right_arm.go_to_pose(right_sx, right_sy, self.right_z[string - 1])
-            self.left_arm.go_to_pose(left_x, left_y, 0.024)
-            self.right_arm.go_to_pose(right_ex, right_ey, self.right_z[string - 1])
-            self.right_arm.go_to_pose(right_ex, right_ey, self.right_z_free)
+            # self.right_arm.go_to_pose(right_sx, right_sy, self.right_z_free)
+            left_x, left_y, _ = self.left_arm.get_pose()
             # self.left_arm.go_to_pose(left_x, left_y, self.left_z_free)
+
+            left_x1 = self.left_x6 + ((self.left_grades[left_grade - 1] - 0.005) / 1.4142) - (
+                    self.left_strings[string - 1] / 1.4142)
+            left_y1 = self.left_y6 + ((self.left_grades[left_grade - 1] - 0.005) / 1.4142) + (
+                    self.left_strings[string - 1] / 1.4142)
+
+            left_xs = [left_x, left_x1, left_x1]
+            left_ys = [left_y, left_y1, left_y1]
+            left_zs = [self.left_z_free, self.left_z_free, self.left_z_pressed]
+
+            self.go_to_pose(left_xs, left_ys, left_zs, right_xs, right_ys, right_zs)
+
+            right_xs = [right_ex, right_ex]
+            right_ys = [right_ey, right_ey]
+            right_zs = [self.right_z[string - 1] - right_delta_z, self.right_z_free]
+            self.go_to_pose([], [], [], right_xs, right_ys, right_zs)
+            delta_time = (time.time() - self.start_time)
+            rospy.logwarn("TIME:%f" % delta_time)
+            rospy.sleep(2.2 - delta_time)
+            self.start_time = time.time()
+
         else:
-            self.right_arm.go_to_pose(right_sx, right_sy, self.right_z_free)
+            right_xs = [right_sx, right_sx, right_ex, right_ex]
+            right_ys = [right_sy, right_sy, right_ey, right_ey]
+            right_zs = [self.right_z_free, self.right_z[string - 1], self.right_z[string - 1], self.right_z_free]
+
             left_x, left_y, left_z = self.left_arm.get_pose()
-            self.left_arm.go_to_pose(left_x, left_y, self.left_z_free)
-            self.right_arm.go_to_pose(right_sx, right_sy, self.right_z[string - 1])
-            self.right_arm.go_to_pose(right_ex, right_ey, self.right_z[string - 1])
-            self.right_arm.go_to_pose(right_ex, right_ey, self.right_z_free)
+            self.go_to_pose([left_x], [left_y], [self.left_z_free], right_xs, right_ys, right_zs)
+            delta_time = (time.time() - self.start_time)
+            rospy.logwarn("TIME:%f" % delta_time)
+            rospy.sleep(2.2 - delta_time)
+            self.start_time = time.time()
 
     def test_right_arm(self):
         self.play(6, 1)
         for i in range(1, 7):
-            self.play(i, 0)
+            self.play(i, 3)
 
     def play_star(self):
         self.play(string=5, left_grade=3)
@@ -146,14 +163,16 @@ class Main:
     def wait_for_action_end_or_abort(self):
 
         while not rospy.is_shutdown():
+            # print("left:%s, right:%s" % (
+            #     str(self.left_arm.last_action_notif_type), str(self.right_arm.last_action_notif_type)))
             if self.left_arm.last_action_notif_type == ActionEvent.ACTION_END and self.right_arm.last_action_notif_type == ActionEvent.ACTION_END:
                 rospy.loginfo("ALL ACTION_END")
                 return True, True
-            elif self.left_arm.last_action_notif_type == ActionEvent.ACTION_END and not self.right_arm.last_action_notif_type == ActionEvent.ACTION_END:
-                rospy.loginfo("LEFT ACTION_END")
+            elif self.left_arm.last_action_notif_type == ActionEvent.ACTION_END and self.right_arm.last_action_notif_type != ActionEvent.ACTION_END:
+                # rospy.loginfo("LEFT ACTION_END")
                 return True, False
-            elif not self.left_arm.last_action_notif_type == ActionEvent.ACTION_END and self.right_arm.last_action_notif_type == ActionEvent.ACTION_END:
-                rospy.loginfo("RIGHT ACTION_END")
+            elif self.left_arm.last_action_notif_type != ActionEvent.ACTION_END and self.right_arm.last_action_notif_type == ActionEvent.ACTION_END:
+                # rospy.loginfo("RIGHT ACTION_END")
                 return False, True
             elif self.left_arm.last_action_notif_type == ActionEvent.ACTION_ABORT or self.right_arm.last_action_notif_type == ActionEvent.ACTION_ABORT:
                 rospy.logerr("ACTION_ABORT")
@@ -183,18 +202,21 @@ class Main:
             self.left_arm.get_pose()
             self.right_arm.go_to_pose(x=0.292414, y=-0.137692, z=self.right_z_free, theta_x=180, theta_y=0,
                                       theta_z=135, theta_change=True)
-            self.left_arm.go_to_pose(0.373, -0.032, 0.04, theta_x=0, theta_y=180,
+            self.left_arm.go_to_pose(0.373, -0.032, 0.045, theta_x=0, theta_y=180,
                                      theta_z=45, theta_change=True)
             self.left_arm.wait_for_action_end_or_abort()
             self.right_arm.wait_for_action_end_or_abort()
 
             self.init_start()
-            # self.test_right_arm()
+
+            # self.play(string=5, left_grade=1)
             # self.play_star()
             # self.test_right_arm()
-            # for i in range(6):
+            self.play_star()
+        # self.test_right_arm()
+        # for i in range(6):
 
-            # self.finished()
+        # self.finished()
 
         # For testing purposes
         rospy.set_param("/kortex_examples_test_results/full_arm_movement_python", success)

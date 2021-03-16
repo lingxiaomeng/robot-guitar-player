@@ -178,7 +178,7 @@ class Robot_Api:
 
         return feedback.base.commanded_tool_pose_x, feedback.base.commanded_tool_pose_y, feedback.base.commanded_tool_pose_z
 
-    def go_to_pose(self, x, y, z, speed=0.2, theta_x=0, theta_y=0, theta_z=0, theta_change=False):
+    def go_to_pose(self, x, y, z, speed=0.25, theta_x=0, theta_y=0, theta_z=0, theta_change=False):
         self.last_action_notif_type = None
         # Get the actual cartesian pose to increment it
         # You can create a subscriber to listen to the base_feedback
@@ -208,7 +208,7 @@ class Robot_Api:
         req.input.constraint.oneof_type.speed.append(pose_speed)
 
         # Call the service
-        rospy.loginfo("Sending the robot to the cartesian pose...")
+        rospy.loginfo("Sending the %s to the cartesian pose..." % self.robot_name)
         try:
             self.play_cartesian_trajectory(req)
         except rospy.ServiceException:
