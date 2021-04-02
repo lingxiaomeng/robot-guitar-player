@@ -7,6 +7,7 @@ from kortex_driver.msg import BaseCyclic_Feedback, ActionEvent
 from robot_api import Robot_Api
 
 import rospy
+from state import *
 
 
 class Main:
@@ -125,7 +126,6 @@ class Main:
             rospy.logwarn("TIME:%f" % delta_time)
             rospy.sleep(2.2 - delta_time)
             self.start_time = time.time()
-
         else:
             right_xs = [right_sx, right_sx, right_ex, right_ex]
             right_ys = [right_sy, right_sy, right_ey, right_ey]
@@ -137,6 +137,62 @@ class Main:
             rospy.logwarn("TIME:%f" % delta_time)
             rospy.sleep(2.2 - delta_time)
             self.start_time = time.time()
+
+    def play_test(self):
+        strings = [5, 5, 3, 3, 3, 3, 3, 3]
+        grade = [3, 3, 0, 0, 2, 2, 0]
+        assert len(strings) != len(strings)
+        # state_left = 0
+        # state_right = 0
+        frame_left = 1
+        frame_right = 1
+        action_left = LEFT_UP
+        action_right = 0
+        left_res = True
+        right_res = True
+        pose_left = (0, 0)  # 0 string 1 grade
+        pose_right = 6
+        while True:
+            if left_res:
+                if action_left == LEFT_UP:
+                    if grade[frame_left] == 0:
+                        frame_left += 1
+                    else:
+                        self.left_arm.go_to_pose(0, 0, 0)  # TODO
+                        action_left = LEFT_MOVE
+                        pose_left = (0, 0)  # TODO
+
+                if action_left == LEFT_MOVE:
+                    if frame_left == frame_right:
+                        self.left_arm.go_to_pose(0, 0, 0)  # todo
+                        action_left = LEFT_PRESS
+
+                if action_left == LEFT_PRESS:
+                    if pose_left[1] == grade[frame_left + 1] and abs(strings[frame_left + 1] - pose_left[0]) < 1:
+                        frame_left += 1
+                    else:
+                        self.left_arm.go_to_pose(0, 0, 0)
+                        frame_left += 1
+                        action_left = LEFT_UP
+
+            if right_res:
+                if action_right == RIGHT_MOVE:
+                    self.right_arm.go_to_pose(0, 0, 0)
+                    action_right = RIGHT_BEFORE_PLAY
+
+                if action_right == RIGHT_BEFORE_PLAY:
+                    self.right_arm.go_to_pose(0, 0, 0)
+                    action_right = RIGHT_AFTER_PLAY
+
+                if action_right == RIGHT_AFTER_PLAY:
+                    self.right_arm.go_to_pose(0, 0, 0)
+                    action_right = RIGHT_UP
+
+                if action_right == RIGHT_UP:
+                    self.right_arm.go_to_pose(0, 0, 0)
+                    action_right = RIGHT_MOVE
+
+            left_res, right_res = self.wait_for_action_end_or_abort()
 
     def test_right_arm(self):
         self.play(6, 1)
@@ -178,7 +234,7 @@ class Main:
                 rospy.logerr("ACTION_ABORT")
                 return False, False
             else:
-                time.sleep(0.01)
+                time.sleep(0.001)
 
     def main(self):
         # For testing purposes
