@@ -138,9 +138,24 @@ class Main:
             rospy.sleep(2.2 - delta_time)
             self.start_time = time.time()
 
+    def get_left_pose(self):
+        pass
+
+    def get_right_pose(self, pose):
+        right_dis_start = 0.003
+
+        cos135 = -1.414
+        sin135 = 1.414
+
+        string = int(round(pose))
+        k = -1 if pose > string else 1
+        x = self.right_x6 + (self.right_strings[string - 1] + k * right_dis_start) / cos135
+        y = self.right_y6 + (self.right_strings[string - 1] + k * right_dis_start) / sin135
+        return x, y
+
     def play_test(self):
         strings = [5, 5, 3, 3, 3, 3, 3, 3]
-        grade = [3, 3, 0, 0, 2, 2, 0]
+        grades = [3, 3, 0, 0, 2, 2, 0]
         assert len(strings) != len(strings)
         # state_left = 0
         # state_right = 0
@@ -152,44 +167,64 @@ class Main:
         right_res = True
         pose_left = (0, 0)  # 0 string 1 grade
         pose_right = 6
+        right_x, right_y = 0, 0
+        left_x, left_y = 0, 0
         while True:
             if left_res:
-                if action_left == LEFT_UP:
-                    if grade[frame_left] == 0:
-                        frame_left += 1
-                    else:
-                        self.left_arm.go_to_pose(0, 0, 0)  # TODO
-                        action_left = LEFT_MOVE
-                        pose_left = (0, 0)  # TODO
-
                 if action_left == LEFT_MOVE:
-                    if frame_left == frame_right:
+                    # if frame_left == frame_right:
+                    pose_left = (strings[frame_left], grades[frame_left])
+                    if pose_left[1] > 0:
                         self.left_arm.go_to_pose(0, 0, 0)  # todo
                         action_left = LEFT_PRESS
 
                 if action_left == LEFT_PRESS:
-                    if pose_left[1] == grade[frame_left + 1] and abs(strings[frame_left + 1] - pose_left[0]) < 1:
+                    if pose_left[1] == grades[frame_left + 1] and abs(strings[frame_left + 1] - pose_left[0]) < 1:
                         frame_left += 1
                     else:
                         self.left_arm.go_to_pose(0, 0, 0)
                         frame_left += 1
                         action_left = LEFT_UP
 
+                if action_left == LEFT_UP:
+                    if grades[frame_left] == 0:
+                        frame_left += 1
+                    else:
+                        if frame_right == frame_left and action_right == RIGHT_UP:
+                            self.left_arm.go_to_pose(0, 0, 0)  # TODO
+                            action_left = LEFT_MOVE
+                            pose_left = (0, 0)  # TODO
+
             if right_res:
                 if action_right == RIGHT_MOVE:
-                    self.right_arm.go_to_pose(0, 0, 0)
+                    right_string = strings[frame_left]
+                    if pose_right >= right_string:
+                        pose_right = right_string + 0.1
+                        right_x, right_x = self.get_right_pose(pose_right)
+                    else:
+                        pose_right = right_string - 0.1
+                        right_x, right_x = self.get_right_pose(pose_right)
+                    self.right_arm.go_to_pose(right_x, right_y, self.right_z_free)
                     action_right = RIGHT_BEFORE_PLAY
 
                 if action_right == RIGHT_BEFORE_PLAY:
-                    self.right_arm.go_to_pose(0, 0, 0)
+                    self.right_arm.go_to_pose(right_x, right_y, self.right_z)
                     action_right = RIGHT_AFTER_PLAY
 
                 if action_right == RIGHT_AFTER_PLAY:
-                    self.right_arm.go_to_pose(0, 0, 0)
-                    action_right = RIGHT_UP
+                    if grades[frame_left] == 0 or (action_left == LEFT_UP and frame_left == frame_right):
+                        right_string = strings[frame_left]
+                        if pose_right >= right_string:
+                            pose_right = right_string - 0.1
+                            right_x, right_y = self.get_right_pose(pose_right)
+                        else:
+                            pose_right = right_string + 0.1
+                            right_x, right_y = self.get_right_pose(pose_right)
+                        self.right_arm.go_to_pose(right_x, right_y, self.right_z)
+                        action_right = RIGHT_UP
 
                 if action_right == RIGHT_UP:
-                    self.right_arm.go_to_pose(0, 0, 0)
+                    self.right_arm.go_to_pose(right_x, right_y, self.right_z_free)
                     action_right = RIGHT_MOVE
 
             left_res, right_res = self.wait_for_action_end_or_abort()
