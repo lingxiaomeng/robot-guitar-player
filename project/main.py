@@ -1,5 +1,6 @@
 from __future__ import print_function
 
+import math
 import time
 
 from kortex_driver.msg import BaseCyclic_Feedback, ActionEvent
@@ -95,7 +96,7 @@ class Main:
         left_x, left_y = 0, 0
         while True:
             if left_res:
-                print(f"")
+                print(f"LEFT Action: {action_left}")
                 if action_left == LEFT_MOVE:
                     pose_left = (strings[frame_left], grades[frame_left])
                     if pose_left[1] > 0:
@@ -110,7 +111,8 @@ class Main:
                     action_left = LEFT_UP
 
                 if action_left == LEFT_UP:
-                    if pose_left[1] == grades[frame_left + 1] and abs(strings[frame_left + 1] - pose_left[0]) < 1:
+                    if pose_left[1] == grades[frame_left + 1] and math.ceil(strings[frame_left + 1] / 2) == math.ceil(
+                            pose_left[0] / 2):
                         frame_left += 1
                     elif frame_left == frame_right and action_right == RIGHT_UP:
                         self.left_arm.go_to_pose(left_x, left_y, self.left_z_free)
@@ -118,6 +120,7 @@ class Main:
                         action_left = LEFT_MOVE
 
             if right_res:
+                print(f"Right Action: {action_right}")
                 if action_right == RIGHT_MOVE:
                     right_string = strings[frame_left]
                     if pose_right >= right_string:
