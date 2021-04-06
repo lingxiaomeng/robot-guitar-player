@@ -73,21 +73,28 @@ class Main:
 
         string = int(round(pose))
         k = -1 if pose > string else 1
-        x = self.right_x6 + (self.right_strings[string - 1] + k * right_dis_start) / cos135
-        y = self.right_y6 + (self.right_strings[string - 1] + k * right_dis_start) / sin135
+        x = self.right_x6 + ((self.right_strings[string - 1] + k * right_dis_start) / cos135)
+        y = self.right_y6 + ((self.right_strings[string - 1] + k * right_dis_start) / sin135)
         z = self.right_z[string - 1]
+        print(f"right pose x:{x} y:{y} z:{z}")
         return x, y, z
 
     def play_test(self):
-        strings = [5, 5, 3, 3, 3, 3, 3, 3]
+        strings = [5, 5, 3, 3, 3, 3, 3]
         grades = [3, 3, 0, 0, 2, 2, 0]
-        assert len(strings) != len(strings)
+        frame_len = len(strings)
+
+        assert len(grades) == len(strings)
+        strings.append(6)
+        strings.append(6)
+        grades.append(0)
+        grades.append(0)
         # state_left = 0
         # state_right = 0
-        frame_left = 1
-        frame_right = 1
-        action_left = LEFT_UP
-        action_right = 0
+        frame_left = 0
+        frame_right = 0
+        action_left = LEFT_MOVE
+        action_right = RIGHT_MOVE
         left_res = True
         right_res = True
         pose_left = (0, 0)  # 0 string 1 grade
@@ -96,7 +103,9 @@ class Main:
         left_x, left_y = 0, 0
         while True:
             if left_res:
-                print(f"LEFT Action: {action_left}")
+                print(f"LEFT frame:{frame_left} Action: {action_left}")
+                # print(f"Right frame {frame_right} Action: {action_right}")
+
                 if action_left == LEFT_MOVE:
                     pose_left = (strings[frame_left], grades[frame_left])
                     if pose_left[1] > 0:
@@ -105,40 +114,45 @@ class Main:
                         action_left = LEFT_PRESS
                     else:
                         frame_left += 1
+                        if frame_left >= frame_len:
+                            action_left = LEFT_UP
 
-                if action_left == LEFT_PRESS:
+                elif action_left == LEFT_PRESS:
                     self.left_arm.go_to_pose(left_x, left_y, self.left_z_pressed)
                     action_left = LEFT_UP
 
-                if action_left == LEFT_UP:
+                elif action_left == LEFT_UP:
                     if pose_left[1] == grades[frame_left + 1] and math.ceil(strings[frame_left + 1] / 2) == math.ceil(
                             pose_left[0] / 2):
                         frame_left += 1
+                        print("next string is same")
                     elif frame_left == frame_right and action_right == RIGHT_UP:
                         self.left_arm.go_to_pose(left_x, left_y, self.left_z_free)
                         frame_left += 1
                         action_left = LEFT_MOVE
 
             if right_res:
-                print(f"Right Action: {action_right}")
+                # print(f"LEFT frame:{frame_left} Action: {action_left}")
+                print(f"Right frame {frame_right} Action: {action_right}")
                 if action_right == RIGHT_MOVE:
                     right_string = strings[frame_left]
                     if pose_right >= right_string:
                         pose_right = right_string + 0.1
-                        right_x, right_x, right_z_down = self.get_right_pose(pose_right)
+                        right_x, right_y, right_z_down = self.get_right_pose(pose_right)
                     else:
                         pose_right = right_string - 0.1
-                        right_x, right_x, right_z_down = self.get_right_pose(pose_right)
+                        right_x, right_y, right_z_down = self.get_right_pose(pose_right)
                     self.right_arm.go_to_pose(right_x, right_y, self.right_z_free)
                     action_right = RIGHT_BEFORE_PLAY
 
-                if action_right == RIGHT_BEFORE_PLAY:
+                elif action_right == RIGHT_BEFORE_PLAY:
                     self.right_arm.go_to_pose(right_x, right_y, right_z_down)
                     action_right = RIGHT_AFTER_PLAY
 
-                if action_right == RIGHT_AFTER_PLAY:
-                    if grades[frame_left] == 0 or (action_left == LEFT_UP and frame_left == frame_right):
-                        right_string = strings[frame_left]
+                elif action_right == RIGHT_AFTER_PLAY:
+                    if grades[frame_right] == 0 or (action_left == LEFT_UP and frame_left == frame_right) or math.ceil(
+                            strings[frame_right + 1] / 2) == math.ceil(pose_left[0] / 2):
+                        right_string = strings[frame_right]
                         if pose_right >= right_string:
                             pose_right = right_string - 0.1
                             right_x, right_y, _ = self.get_right_pose(pose_right)
@@ -148,9 +162,12 @@ class Main:
                         self.right_arm.go_to_pose(right_x, right_y, right_z_down)
                         action_right = RIGHT_UP
 
-                if action_right == RIGHT_UP:
+                elif action_right == RIGHT_UP:
                     self.right_arm.go_to_pose(right_x, right_y, self.right_z_free)
                     action_right = RIGHT_MOVE
+                    frame_right += 1
+                    if frame_right == frame_len:
+                        break
 
             left_res, right_res = self.wait_for_action_end_or_abort()
 
@@ -163,16 +180,16 @@ class Main:
                 rospy.loginfo("ALL ACTION_END")
                 return True, True
             elif self.left_arm.last_action_notif_type == ActionEvent.ACTION_END and self.right_arm.last_action_notif_type != ActionEvent.ACTION_END:
-                # rospy.loginfo("LEFT ACTION_END")
+                rospy.loginfo("LEFT ACTION_END")
                 return True, False
             elif self.left_arm.last_action_notif_type != ActionEvent.ACTION_END and self.right_arm.last_action_notif_type == ActionEvent.ACTION_END:
-                # rospy.loginfo("RIGHT ACTION_END")
+                rospy.loginfo("RIGHT ACTION_END")
                 return False, True
             elif self.left_arm.last_action_notif_type == ActionEvent.ACTION_ABORT or self.right_arm.last_action_notif_type == ActionEvent.ACTION_ABORT:
                 rospy.logerr("ACTION_ABORT")
                 return False, False
             else:
-                time.sleep(0.001)
+                time.sleep(0.01)
 
     def main(self):
         # For testing purposes
@@ -202,6 +219,7 @@ class Main:
             self.right_arm.wait_for_action_end_or_abort()
 
             self.init_start()
+            self.play_test()
 
             # self.play(string=5, left_grade=1)
             # self.play_star()
