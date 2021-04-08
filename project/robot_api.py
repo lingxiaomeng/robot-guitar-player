@@ -208,7 +208,7 @@ class Robot_Api:
         req.input.constraint.oneof_type.speed.append(pose_speed)
 
         # Call the service
-        rospy.loginfo("Sending the %s to the cartesian pose..." % self.robot_name)
+        # rospy.loginfo("Sending the %s to the cartesian pose..." % self.robot_name)
         try:
             self.play_cartesian_trajectory(req)
         except rospy.ServiceException:
