@@ -24,7 +24,7 @@ class Main:
         self.start_time = 0.0
         self.end_time = 0.0
 
-        self.string_heights = [0.0113, 0.0115, 0.01332, 0.01330, 0.01317, 0.01296]
+        self.string_heights = [0.0113, 0.0124, 0.013, 0.01330, 0.01317, 0.01296]
         for i in range(len(self.string_heights)):
             self.string_heights[i] = self.string_heights[i] - self.string_heights[5] + 0.0439
         self.right_z = self.string_heights
@@ -36,8 +36,8 @@ class Main:
 
         dis_string = 0.05292 / 5
         self.right_strings = [dis_string * 5, dis_string * 4, dis_string * 3, dis_string * 2, dis_string * 1, 0]
-        self.left_z_pressed = 0.015
-        self.left_z_free = 0.025
+        self.left_z_pressed = 0.014
+        self.left_z_free = 0.024
         self.right_z_free = 0.048
 
     def init_start(self):
@@ -72,18 +72,20 @@ class Main:
         k = -1 if pose > string else 1
         x = self.right_x6 + ((self.right_strings[string - 1] + k * right_dis_start) / cos135)
         y = self.right_y6 + ((self.right_strings[string - 1] + k * right_dis_start) / sin135)
-        z = self.right_z[string - 1]
+        z = self.right_z[string - 1] - 0.001 / 3 * grade
         print(f"right pose string:{string} x:{x} y:{y} z:{z}")
         return x, y, z
 
-    def play(self, strings, grades):
+    def play(self, strings, grades, beats):
         frame_len = len(strings)
 
-        assert len(grades) == len(strings)
+        assert len(grades) == len(strings) == len(beats)
         strings.append(6)
         strings.append(6)
         grades.append(0)
         grades.append(0)
+        beats.append(1)
+        beats.append(1)
         # state_left = 0
         # state_right = 0
         frame_left = 0
@@ -98,6 +100,7 @@ class Main:
         left_x, left_y = 0, 0
         left_ready = [False] * (frame_len + 2)
         right_ready = [False] * (frame_len + 2)
+        start_time = time.time()
         # right_ready[-1] = True
         while True:
             if left_res:
@@ -118,6 +121,8 @@ class Main:
 
                 elif action_left == LEFT_PRESS:
                     if right_ready[frame_left - 1]:
+                        if grades[frame_left - 1] == 0 and strings[frame_left] == strings[frame_left - 1]:
+                            time.sleep(0.1)
                         self.left_arm.go_to_pose(left_x, left_y, self.left_z_pressed)
                         action_left = LEFT_UP
 
@@ -136,8 +141,8 @@ class Main:
 
             if right_res:
 
-                print(f"LEFT frame:{frame_left} Action: {action_left}")
-                print(f"Right frame {frame_right} Action: {action_right}")
+                # print(f"LEFT frame:{frame_left} Action: {action_left}")
+                # print(f"Right frame {frame_right} Action: {action_right}")
                 if action_right == RIGHT_MOVE:
                     right_ready[frame_right - 1] = True
 
@@ -166,7 +171,14 @@ class Main:
                         else:
                             pose_right = right_string + 0.1
                             right_x, right_y, _ = self.get_right_pose(pose_right, grades[frame_right])
-                        time.sleep(0.1)
+                        # time.sleep(0.1)
+                        et = time.time()
+                        dt = et - start_time
+                        print(f"frame {frame_right - 1}: time: {dt}")
+                        frame_time = 1.2 * beats[frame_right - 1]
+                        if frame_time - dt > 0:
+                            time.sleep(frame_time - dt)
+                        start_time = time.time()
                         self.right_arm.go_to_pose(right_x, right_y, right_z_down)
                         action_right = RIGHT_UP
 
@@ -199,13 +211,21 @@ class Main:
 
     def test_right_arm(self):
         strings = [6, 5, 4, 3, 2, 1, 1, 2, 3, 4, 5, 6]
-        grades = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
-        self.play(strings, grades)
+        grades = [3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3]
+        beats = [1] * len(strings)
+        self.play(strings, grades, beats)
 
     def play_star(self):
-        strings = [5, 5, 3, 3, 3, 3, 3]
-        grades = [3, 3, 0, 0, 2, 2, 0]
-        self.play(strings, grades)
+        strings = [5, 5, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4, 5]
+        grades = [3, 3, 0, 0, 2, 2, 0, 3, 3, 2, 2, 0, 0, 3]
+        beats = [1, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 1, 2]
+        self.play(strings, grades, beats)
+
+    def play_star(self):
+        strings = [5, 5, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4, 5]
+        grades = [3, 3, 0, 0, 2, 2, 0, 3, 3, 2, 2, 0, 0, 3]
+        beats = [1, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 1, 2]
+        self.play(strings, grades, beats)
 
     def main(self):
         # For testing purposes
@@ -239,8 +259,8 @@ class Main:
             self.right_arm.wait_for_action_end_or_abort()
 
             self.init_start()
-            self.test_right_arm()
-            # self.play_star()
+            # self.test_right_arm()
+            self.play_star()
             # self.play_test()
 
             # self.play(string=5, left_grade=1)

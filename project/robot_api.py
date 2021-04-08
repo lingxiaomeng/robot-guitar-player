@@ -178,7 +178,7 @@ class Robot_Api:
 
         return feedback.base.commanded_tool_pose_x, feedback.base.commanded_tool_pose_y, feedback.base.commanded_tool_pose_z
 
-    def go_to_pose(self, x, y, z, speed=0.25, theta_x=0, theta_y=0, theta_z=0, theta_change=False):
+    def go_to_pose(self, x, y, z, speed=0.3, theta_x=0, theta_y=0, theta_z=0, theta_change=False):
         self.last_action_notif_type = None
         # Get the actual cartesian pose to increment it
         # You can create a subscriber to listen to the base_feedback
