@@ -47,25 +47,25 @@ if __name__ == "__main__":
     # print np.cross(xa, za)
 
     R = np.array(
-        [xa,
-         np.cross(za, xa),
-         za]).transpose()
+        [[0.7071, -0.7071, 0],
+         [0.6124, 0.6124, -0.5],
+         [0.3536, 0.3536, 0.8660]])
 
     # R = np.linalg.inv(R + 1e-10)
-    T = (np.array([[-0.3], [0.2], [0]]))
+    T = (np.array([[-0.2880], [0.1790], [0.0824]]))
 
-    d = 1
+    d = 0.4205
     dinv = 1 / d
 
-    N = (np.array([[0], [0], [0.5]]))
+    N = (np.array([[0], [0.5], [0.866]]))
 
     H = R + (T / d).dot(N.transpose())
     # print H
-    K_top = np.array([[892.622005, 0.000000, 300],
+    K_top = np.array([[892.622005, 0.000000, 1000],
                       [0.000000, 891.284636, 800],
                       [0.000000, 0.000000, 1.000000]])
 
-    Homography = K_top.dot(H).dot(np.linalg.inv(K))
+    Homography = K.dot(H).dot(np.linalg.inv(K))
     Homography_inv = np.linalg.inv(Homography)
 
     # Homography = np.float32([[1, 0.1, 0], [0, 1, 0], [0, 0, 1]])
@@ -73,11 +73,13 @@ if __name__ == "__main__":
 
     i = 0
     for fname in images:
+        fname = '/home/mlx/project/src/image/data_set/1.jpg'
         img = cv.imread(fname)
         img = undistort(img)
         out = cv.warpPerspective(img, Homography, (1200, 1000))
-        cv.imwrite('/home/mlx/project/src/image/data_set_img/%d.jpg' % i, out)
+        cv.imwrite('/home/mlx/project/src/image/test%d.jpg' % i, out)
         i += 1
+        break
         print(i)
         # break
         # break

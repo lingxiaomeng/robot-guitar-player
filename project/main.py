@@ -221,11 +221,11 @@ class Main:
         beats = [1, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 1, 2]
         self.play(strings, grades, beats)
 
-    def play_star(self):
-        strings = [5, 5, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4, 5]
-        grades = [3, 3, 0, 0, 2, 2, 0, 3, 3, 2, 2, 0, 0, 3]
-        beats = [1, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 1, 2]
-        self.play(strings, grades, beats)
+    def play_secret_base(self):
+        strings = [3, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 3, 3, 3]
+        grades_ = [2, 3, 0, 0, 2, 2, 2, 2, 2, 2, 2, 0, 0, 0, 0, 0, 0, 0, 3, 3, 3, 3, 3, 3, 3, 2, 2, 2]
+        beats__ = [1, 1, 1, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 2]
+        self.play(strings, grades_, beats__)
 
     def main(self):
         # For testing purposes
@@ -260,7 +260,7 @@ class Main:
 
             self.init_start()
             # self.test_right_arm()
-            self.play_star()
+            self.play_secret_base()
             # self.play_test()
 
             # self.play(string=5, left_grade=1)
