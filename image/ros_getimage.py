@@ -28,8 +28,8 @@ bridge = CvBridge()
 def main():
     rospy.init_node('image_listener')
     # Define your image topic
-    i = 0
-    data_type = 'key_board'
+    i = 6
+    data_type = 'guitar'
     dirs = '/home/mlx/project/src/image/data_set/%s_data_set/' % data_type
     if not os.path.exists(dirs):
         os.makedirs(dirs)

@@ -1,86 +1,72 @@
 # coding=utf-8
 import glob
-
+import os
 import cv2 as cv
 import sys
 import numpy as np
-import math
+from math import sqrt
 
-
-def undistort(img):
-    mtx = np.array([[892.622005, 0.000000, 637.957594],
-                    [0.000000, 891.284636, 357.766994],
-                    [0.000000, 0.000000, 1.000000]])
-
-    dist = np.array([[0.083420, -0.163709, -0.001863, 0.000386, 0.000000]])
-
-    w = 1280
-    h = 720
-
-    newcameramtx, roi = cv.getOptimalNewCameraMatrix(mtx, dist, (w, h), 1,
-                                                     (w, h))
-
-    # Checking to make sure the new camera materix was properly generated
-    # print(newcameramtx)
-
-    # Undistorting
-    dst = cv.undistort(img, mtx, dist, None, newcameramtx)
-
-    # Cropping the image
-    x, y, w, h = roi
-    dst = dst[y:+y + h, x:x + w]
-    return dst
-
+K_left = [606.4096069335938, 0.0, 322.3016052246094, 0.0, 0.0, 606.3513793945312, 235.92373657226562, 0.0, 0.0, 0.0,
+          1.0, 0.0]
+K_right = [614.1268310546875, 0.0, 321.2118835449219, 0.0, 614.7515869140625, 234.63755798339844, 0.0, 0.0, 1.0]
 
 if __name__ == "__main__":
 
-    K = np.array([[719.86743513, 0., 316.97955052],
-                  [0., 749.4460099, 238.44845194],
-                  [0., 0., 1.]])
+    K_left = np.array([[606.4096069335938, 0., 322.3016052246094],
+                       [0., 606.3513793945312, 235.92373657226562],
+                       [0., 0., 1.]])
 
-    K = np.array([[892.622005, 0.000000, 637.957594],
-                  [0.000000, 891.284636, 357.766994],
-                  [0.000000, 0.000000, 1.000000]])
-
-    xa = np.array([1 / math.sqrt(2), 1 / math.sqrt(2), 0])
-    za = np.array([math.sqrt(2) / 4, -math.sqrt(2) / 4, math.sqrt(3) / 2])
-    # print np.cross(xa, za)
+    K_right = np.array([[614.1268310546875, 0., 321.2118835449219],
+                        [0., 614.7515869140625, 234.63755798339844],
+                        [0., 0., 1.]])
 
     R = np.array(
-        [[0.7071, -0.7071, 0],
-         [0.6124, 0.6124, -0.5],
-         [0.3536, 0.3536, 0.8660]])
+        [[sqrt(0.5), -sqrt(0.5), 0],
+         [sqrt(0.375), sqrt(0.375), -0.5],
+         [sqrt(0.125), sqrt(0.125), sqrt(0.75)]])
 
-    # R = np.linalg.inv(R + 1e-10)
-    T = (np.array([[-0.2880], [0.1790], [0.0824]]))
+    print(np.linalg.det(R))
 
-    d = 0.4205
-    dinv = 1 / d
+    T = (np.array([[-0.287954], [0.178989], [0.0824499]]))
 
-    N = (np.array([[0], [0.5], [0.866]]))
+    d = 0.4205 - 0.05
+    # dinv = 1 / d
+
+    N = (np.array([[0], [0.5], [sqrt(0.75)]]))
 
     H = R + (T / d).dot(N.transpose())
     # print H
-    K_top = np.array([[892.622005, 0.000000, 1000],
-                      [0.000000, 891.284636, 800],
-                      [0.000000, 0.000000, 1.000000]])
+    K_top_left = np.array([[606.4096069335938, 0., 1000],
+                           [0., 606.3513793945312, 600],
+                           [0., 0., 1.]])
 
-    Homography = K.dot(H).dot(np.linalg.inv(K))
-    Homography_inv = np.linalg.inv(Homography)
+    K_top_right = np.array([[614.1268310546875, 0., 1000],
+                            [0., 614.7515869140625, 600],
+                            [0., 0., 1.]])
+
+    Homography_left = K_top_left.dot(H).dot(np.linalg.inv(K_left))
+
+    Homography_right = K_top_right.dot(H).dot(np.linalg.inv(K_right))
 
     # Homography = np.float32([[1, 0.1, 0], [0, 1, 0], [0, 0, 1]])
-    images = glob.glob('/home/mlx/project/src/image/data_set/*.jpg')  # 拍摄的十几张棋盘图片所在目录
+    guitar_images = glob.glob('/home/mlx/project/src/image/data_set/guitar_data_set/*.jpg')
+    keyboard_images = glob.glob('/home/mlx/project/src/image/data_set/key_board_data_set/*.jpg')
 
     i = 0
-    for fname in images:
-        fname = '/home/mlx/project/src/image/data_set/1.jpg'
+    for fname in guitar_images:
+        # fname = '/home/mlx/project/src/image/data_set/1.jpg'
+        name = 'guitar_' + (os.path.basename(fname))
+        print(name)
         img = cv.imread(fname)
-        img = undistort(img)
-        out = cv.warpPerspective(img, Homography, (1200, 1000))
-        cv.imwrite('/home/mlx/project/src/image/test%d.jpg' % i, out)
-        i += 1
-        break
-        print(i)
+        if 'left' in name:
+            out = cv.warpPerspective(img, Homography_left, (1200, 1000))
+        else:
+            out = cv.warpPerspective(img, Homography_right, (1200, 1000))
+        # print(out)
+        cv.imwrite('/home/mlx/project/src/image/data_set_img/' + name, out)
         # break
         # break
-        # cv.waitKey(0)
+        # cv.imshow('', out)
+        # k = cv.waitKey(0)
+        # if k == 27:
+        #     break
