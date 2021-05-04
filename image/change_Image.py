@@ -32,7 +32,7 @@ if __name__ == "__main__":
     K_right = np.array([[614.1268310546875, 0., 321.2118835449219],
                         [0., 614.7515869140625, 234.63755798339844],
                         [0., 0., 1.]])
-    K_top_left = np.array([[606.4096069335938, 0., 800],
+    K_top_left = np.array([[606.4096069335938, 0., 480],
                            [0., 606.3513793945312, 250],
                            [0., 0., 1.]])
 
@@ -41,16 +41,12 @@ if __name__ == "__main__":
                             [0., 0., 1.]])
     H = get_H()
     Homography_left = K_top_left.dot(H).dot(np.linalg.inv(K_left))
-
     Homography_right = K_top_right.dot(H).dot(np.linalg.inv(K_right))
-
-    # Homography = np.float32([[1, 0.1, 0], [0, 1, 0], [0, 0, 1]])
     guitar_images = glob.glob('/home/mlx/project/src/image/data_set/guitar_data_set/*.jpg')
     keyboard_images = glob.glob('/home/mlx/project/src/image/data_set/key_board_data_set/*.jpg')
 
     i = 0
     for fname in guitar_images:
-        # fname = '/home/mlx/project/src/image/data_set/1.jpg'
         name = 'guitar_' + (os.path.basename(fname))
         print(name)
         img = cv.imread(fname)
@@ -58,10 +54,16 @@ if __name__ == "__main__":
             out = cv.warpPerspective(img, Homography_left, (762, 500))
         else:
             out = cv.warpPerspective(img, Homography_right, (762, 500))
-        # print(out)
         cv.imwrite('/home/mlx/project/src/image/data_set_img/' + name, out)
-        # break
-        # break
+    for fname in keyboard_images:
+        name = 'keyboard_' + (os.path.basename(fname))
+        print(name)
+        img = cv.imread(fname)
+        if 'left' in name:
+            out = cv.warpPerspective(img, Homography_left, (762, 500))
+        else:
+            out = cv.warpPerspective(img, Homography_right, (762, 500))
+        cv.imwrite('/home/mlx/project/src/image/data_set_img/' + name, out)
         # cv.imshow('', out)
         # k = cv.waitKey(0)
         # if k == 27:
