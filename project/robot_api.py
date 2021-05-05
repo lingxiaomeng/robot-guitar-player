@@ -168,13 +168,13 @@ class Robot_Api:
 
     def get_pose(self):
         feedback = rospy.wait_for_message("/" + self.robot_name + "/base_feedback", BaseCyclic_Feedback)
-        print("x %f" % feedback.base.commanded_tool_pose_x)
-        print("y %f" % feedback.base.commanded_tool_pose_y)
-        print("z %f" % feedback.base.commanded_tool_pose_z)
-
-        print("theta x %f" % feedback.base.commanded_tool_pose_theta_x)
-        print("theta y %f" % feedback.base.commanded_tool_pose_theta_y)
-        print("theta z %f" % feedback.base.commanded_tool_pose_theta_z)
+        # print("x %f" % feedback.base.commanded_tool_pose_x)
+        # print("y %f" % feedback.base.commanded_tool_pose_y)
+        # print("z %f" % feedback.base.commanded_tool_pose_z)
+        #
+        # print("theta x %f" % feedback.base.commanded_tool_pose_theta_x)
+        # print("theta y %f" % feedback.base.commanded_tool_pose_theta_y)
+        # print("theta z %f" % feedback.base.commanded_tool_pose_theta_z)
 
         return feedback.base.commanded_tool_pose_x, feedback.base.commanded_tool_pose_y, feedback.base.commanded_tool_pose_z
 

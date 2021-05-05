@@ -3,6 +3,7 @@ from __future__ import print_function
 import math
 import time
 
+from math import sqrt
 from kortex_driver.msg import BaseCyclic_Feedback, ActionEvent
 
 from robot_api import Robot_Api
@@ -61,6 +62,11 @@ class Main:
         y = self.left_y6 + ((self.left_grades[left_grade - 1] - 0.005) / 1.4142) + (
                 self.left_strings[string - 1] / 1.4142)
         return x, y
+
+    def cal_pose(self, x, y, dx, dy):
+        rx = x + sqrt(0.5) * dx + sqrt(0.5) * dy
+        ry = y + sqrt(0.5) * dx - sqrt(0.5) * dy
+        return rx, ry
 
     def get_right_pose(self, pose, grade):
         right_dis_start = 0.004
@@ -227,6 +233,46 @@ class Main:
         beats__ = [1, 1, 1, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 2]
         self.play(strings, grades_, beats__)
 
+    def test_arm(self, arm: Robot_Api):
+
+        while True:
+            a = input("control robot")
+            x, y, z = arm.get_pose()
+            print(f"x:{x} y:{y} z:{z}")
+            delta = 0.0001
+            if (a == 'w'):
+                x, y = self.cal_pose(x, y, 0, -delta)
+                arm.go_to_pose(x, y, z)
+                arm.wait_for_action_end_or_abort()
+            if (a == 'W'):
+                x, y = self.cal_pose(x, y, 0, -10 * delta)
+                arm.go_to_pose(x, y, z)
+                arm.wait_for_action_end_or_abort()
+            elif (a == 'a'):
+                x, y = self.cal_pose(x, y, -delta, 0)
+                arm.go_to_pose(x, y, z)
+                arm.wait_for_action_end_or_abort()
+            elif (a == 's'):
+                x, y = self.cal_pose(x, y, 0, delta)
+                arm.go_to_pose(x, y, z)
+                arm.wait_for_action_end_or_abort()
+            elif (a == 'S'):
+                x, y = self.cal_pose(x, y, 0, delta * 10)
+                arm.go_to_pose(x, y, z)
+                arm.wait_for_action_end_or_abort()
+            elif (a == 'd'):
+                x, y = self.cal_pose(x, y, delta, 0)
+                arm.go_to_pose(x, y, z)
+                arm.wait_for_action_end_or_abort()
+            elif (a == 'q'):
+                arm.go_to_pose(x, y, z + delta)
+                arm.wait_for_action_end_or_abort()
+            elif (a == 'e'):
+                arm.go_to_pose(x, y, z - delta)
+                arm.wait_for_action_end_or_abort()
+            elif (a == 'ok'):
+                break
+
     def main(self):
         # For testing purposes
         success = True
@@ -258,22 +304,21 @@ class Main:
             self.left_arm.wait_for_action_end_or_abort()
             self.right_arm.wait_for_action_end_or_abort()
 
+            self.test_arm(self.right_arm)
+            self.test_arm(self.left_arm)
             self.init_start()
-            # self.test_right_arm()
-            self.play_secret_base()
-            # self.play_test()
 
+            # self.test_right_arm()
+            # self.play_secret_base()
+            # self.play_test()
             # self.play(string=5, left_grade=1)
             # self.play_star()
             # self.test_right_arm()
         # self.test_right_arm()
         # for i in range(6):
-
         # self.finished()
-
         # For testing purposes
         rospy.set_param("/kortex_examples_test_results/full_arm_movement_python", success)
-
         if not success:
             rospy.logerr("The example encountered an error.")
 
