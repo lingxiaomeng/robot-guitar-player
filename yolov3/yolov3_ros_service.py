@@ -12,6 +12,14 @@ from sensor_msgs.msg import Image
 from yolov3.detect import YoloDetector
 import json
 
+K_left = np.array([[606.4096069335938, 0., 322.3016052246094],
+                   [0., 606.3513793945312, 235.92373657226562],
+                   [0., 0., 1.]])
+
+K_right = np.array([[614.1268310546875, 0., 321.2118835449219],
+                    [0., 614.7515869140625, 234.63755798339844],
+                    [0., 0., 1.]])
+
 
 def get_H():
     R = np.array(
@@ -22,13 +30,7 @@ def get_H():
     d = 0.4205 - 0.05
     N = (np.array([[0], [0.5], [sqrt(0.75)]]))
     H = R + (T / d).dot(N.transpose())
-    K_left = np.array([[606.4096069335938, 0., 322.3016052246094],
-                       [0., 606.3513793945312, 235.92373657226562],
-                       [0., 0., 1.]])
 
-    K_right = np.array([[614.1268310546875, 0., 321.2118835449219],
-                        [0., 614.7515869140625, 234.63755798339844],
-                        [0., 0., 1.]])
     K_top_left = np.array([[606.4096069335938, 0., 480],
                            [0., 606.3513793945312, 250],
                            [0., 0., 1.]])
@@ -45,8 +47,19 @@ def image2np(image, dtype):
     return np.frombuffer(image.data, dtype=dtype).reshape(image.height, image.width, -1)
 
 
+def get_camera_point(x, y, d, K):
+    z_c = float(d[0]) / 1000
+    fx = K[0][0]
+    fy = K[1][1]
+    u0 = K[0][2]
+    v0 = K[1][2]
+    x_c = z_c / fx * (x - u0)
+    y_c = z_c / fy * (y - v0)
+    return x_c, y_c, z_c
+
+
 def get_image():
-    print("try to get image")
+    rospy.loginfo("try to get image")
     right_topic = "/right_camera/color/image_raw"
     left_topic = "/left_camera/color/image_raw"
     right_depth_topic = "/right_camera/aligned_depth_to_color/image_raw"
@@ -84,7 +97,8 @@ def perspective(x, y, H):
     return px, py
 
 
-def yolo_detect(image, depth_image, H):
+def yolo_detect(image, depth_image, H, K):
+    rospy.loginfo("start detect")
     poss, label, im0 = detector.detect(image)
     if len(poss) > 0:
         x = (poss[0][0] + poss[0][2]) / 2
@@ -96,11 +110,16 @@ def yolo_detect(image, depth_image, H):
         print(f"distance: {depth}")
         depth = get_depth(depth_image, x, y)
         print(f"distance: {depth}")
+        x_c, y_c, z_c = get_camera_point(x, y, depth, K)
+        label_name = label[0].split(" ")[0]
+        confidence = label[0].split(" ")[1]
+
         result = {
-            "x": x,
-            "y": y,
-            "d": int(depth[0]),
-            "label": label[0]
+            "x": x_c,
+            "y": y_c,
+            "z": z_c,
+            "label": label_name,
+            "confidence": confidence
         }
         return result
     else:
@@ -108,16 +127,16 @@ def yolo_detect(image, depth_image, H):
 
 
 def handle_pose_req(req):
-    print("receive req")
+    rospy.loginfo("receive req")
     left_image, right_image, left_depth, right_depth = get_image()
     H_left, H_right = get_H()
     left_image_perspective = perspective_image(left_image, H_left)
     right_image_perspective = perspective_image(right_image, H_right)
-    res_left = yolo_detect(left_image_perspective, left_depth, H_left)
-    res_right = yolo_detect(right_image_perspective, right_depth, H_left)
+    res_left = yolo_detect(left_image_perspective, left_depth, H_left, K_left)
+    res_right = yolo_detect(right_image_perspective, right_depth, H_right, K_right)
     res = {"left": res_left, "right": res_right}
     res = json.dumps(res)
-    print(res)
+    rospy.loginfo(res)
     return TriggerResponse(True, res)
 
 
