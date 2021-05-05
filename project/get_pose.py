@@ -22,15 +22,15 @@ def get_pose():
         while not rospy.is_shutdown():
             if res['left']:
                 br.sendTransform((res['left']['x'], res['left']['y'], res['left']['z']),
-                                 (0,0,0,1),
+                                 (0.0026716, 0.96528, -0.26119, -0.0010496),
                                  rospy.Time.now(),
-                                 # "left_guitar",
                                  "left_" + res['left']['label'],
                                  "left_camera_color_optical_frame")
                 # rospy.loginfo("add left")
+
             if res['right']:
                 br.sendTransform((res['right']['x'], res['right']['y'], res['right']['z']),
-                                 (0,0,0,1),
+                                 (0.0026716, 0.96528, -0.26119, -0.0010496),
                                  rospy.Time.now(),
                                  "right_" + res['right']['label'],
                                  "right_camera_color_optical_frame")
