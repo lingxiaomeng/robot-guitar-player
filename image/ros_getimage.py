@@ -34,26 +34,29 @@ def main():
     if not os.path.exists(dirs):
         os.makedirs(dirs)
     while rospy:
-        right_topic = "/right_camera/color/image_raw"
-        left_topic = "/left_camera/color/image_raw"
+        right_topic = "/right_camera/aligned_depth_to_color/image_raw"
+        left_topic = "/left_camera/aligned_depth_to_color/image_raw"
+
 
         left_image = rospy.wait_for_message(left_topic, Image)
         right_image = rospy.wait_for_message(right_topic, Image)
         if left_image and right_image:
             # print(left_image)
-            left_image = np.frombuffer(left_image.data, dtype=np.uint8).reshape(left_image.height, left_image.width, -1)
-            left_image = cv2.cvtColor(left_image, cv2.COLOR_RGB2BGR)
-            right_image = np.frombuffer(right_image.data, dtype=np.uint8).reshape(right_image.height, right_image.width,
+            left_image = np.frombuffer(left_image.data, dtype=np.uint16).reshape(left_image.height, left_image.width, -1)
+            print(left_image.shape)
+            # left_image = cv2.cvtColor(left_image, cv2.COLOR_RGB2BGR)
+            right_image = np.frombuffer(right_image.data, dtype=np.uint16).reshape(right_image.height, right_image.width,
                                                                                   -1)
-            right_image = cv2.cvtColor(right_image, cv2.COLOR_RGB2BGR)
+            print(left_image[240,0])
+            # right_image = cv2.cvtColor(right_image, cv2.COLOR_RGB2BGR)
             image = np.hstack((left_image, right_image))
-            cv2.imshow('right', image)
+            cv2.imshow('right', image.astype(np.float32)/3000)
             k = cv2.waitKey(1)
 
             if k == ord('s'):
 
-                cv2.imwrite(dirs + 'left_%d.jpg' % (i), left_image)
-                cv2.imwrite(dirs + 'right_%d.jpg' % (i), right_image)
+                # cv2.imwrite(dirs + 'left_%d.jpg' % (i), left_image)
+                # cv2.imwrite(dirs + 'right_%d.jpg' % (i), right_image)
                 print("save image %d" % i)
                 i += 1
             elif k == 27:
