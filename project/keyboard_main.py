@@ -8,7 +8,7 @@ from kortex_driver.msg import BaseCyclic_Feedback, ActionEvent
 from robot_api import Robot_Api
 
 import rospy
-from guitar_state import *
+from keyboard_state import *
 
 
 class Main:
@@ -76,14 +76,14 @@ class Main:
         print(f"right pose string:{string} x:{x} y:{y} z:{z}")
         return x, y, z
 
-    def play(self, strings, grades, beats):
-        frame_len = len(strings)
+    def play(self, left_key, right_key, beats):
+        frame_len = len(left_key)
 
-        assert len(grades) == len(strings) == len(beats)
-        strings.append(6)
-        strings.append(6)
-        grades.append(0)
-        grades.append(0)
+        assert len(left_key) == len(right_key) == len(beats)
+        left_key.append(0)
+        left_key.append(0)
+        right_key.append(0)
+        right_key.append(0)
         beats.append(1)
         beats.append(1)
         # state_left = 0
@@ -94,98 +94,87 @@ class Main:
         action_right = RIGHT_MOVE
         left_res = True
         right_res = True
-        pose_left = (0, 0)  # 0 string 1 grade
-        pose_right = 6
+        pose_left = 0
+        pose_right = 0
         right_x, right_y, right_z_down = 0, 0, 0
         left_x, left_y = 0, 0
         left_ready = [False] * (frame_len + 2)
         right_ready = [False] * (frame_len + 2)
+        timewait = [False] * (frame_len + 2)
         start_time = time.time()
         # right_ready[-1] = True
         while True:
+            if frame_left >= frame_len and frame_right >= frame_len:
+                self.left_arm.wait_for_action_end_or_abort()
+                self.right_arm.wait_for_action_end_or_abort()
+                break
             if left_res:
                 # print(f"LEFT frame:{frame_left} Action: {action_left}")
                 # print(f"Right frame {frame_right} Action: {action_right}")
-
                 if action_left == LEFT_MOVE:
-                    pose_left = (strings[frame_left], grades[frame_left])
+                    pose_left = left_key[frame_left]
                     if pose_left[1] > 0:
                         left_x, left_y = self.get_left_pose(pose_left)
                         self.left_arm.go_to_pose(left_x, left_y, self.left_z_free)  # todo
                         action_left = LEFT_PRESS
                     else:
-                        left_ready[frame_left] = True
-                        frame_left += 1
-                        if frame_left >= frame_len:
-                            action_left = LEFT_UP
+                        if frame_left < frame_len:
+                            left_ready[frame_left] = True
+                            frame_left += 1
 
                 elif action_left == LEFT_PRESS:
-                    if right_ready[frame_left - 1]:
-                        if grades[frame_left - 1] == 0 and strings[frame_left] == strings[frame_left - 1]:
-                            time.sleep(0.1)
+                    left_ready[frame_left] = True
+                    if right_ready[frame_left]:
+                        if not timewait[frame_left]:
+                            et = time.time()
+                            dt = et - start_time
+                            print(f"frame {frame_right - 1}: time: {dt}")
+                            frame_time = 1.2 * beats[frame_right - 1]
+                            if frame_time - dt > 0:
+                                time.sleep(frame_time - dt)
+                            start_time = time.time()
+                            timewait[frame_left] = True
                         self.left_arm.go_to_pose(left_x, left_y, self.left_z_pressed)
                         action_left = LEFT_UP
 
                 elif action_left == LEFT_UP:
-                    left_ready[frame_left] = True
-                    if frame_left <= frame_len:
-                        # continue
-                        if pose_left[1] == grades[frame_left + 1] and math.ceil(
-                                strings[frame_left + 1] / 2) == math.ceil(pose_left[0] / 2):
-                            frame_left += 1
-                            print(f"frame: {frame_left} next string is same")
-                        elif right_ready[frame_left]:
-                            self.left_arm.go_to_pose(left_x, left_y, self.left_z_free)
-                            frame_left += 1
-                            action_left = LEFT_MOVE
+                    self.left_arm.go_to_pose(left_x, left_y, self.left_z_free)
+                    frame_left += 1
+                    action_left = LEFT_MOVE
 
             if right_res:
-
-                # print(f"LEFT frame:{frame_left} Action: {action_left}")
-                # print(f"Right frame {frame_right} Action: {action_right}")
+                # print(f"right frame:{frame_right} Action: {action_right}")
+                # print(f"left frame {frame_left} Action: {action_left}")
                 if action_right == RIGHT_MOVE:
-                    right_ready[frame_right - 1] = True
-
-                    if frame_right == frame_len:
-                        break
-                    right_string = strings[frame_right]
-                    if pose_right >= right_string:
-                        pose_right = right_string + 0.1
-                        right_x, right_y, right_z_down = self.get_right_pose(pose_right, grades[frame_right])
+                    pose_right = right_key[frame_right]
+                    if pose_right[1] > 0:
+                        right_x, right_y = self.get_right_pose(pose_right)
+                        self.right_arm.go_to_pose(right_x, right_y, self.right_z_free)  # todo
+                        action_right = RIGHT_PRESS
                     else:
-                        pose_right = right_string - 0.1
-                        right_x, right_y, right_z_down = self.get_right_pose(pose_right, grades[frame_right])
-                    self.right_arm.go_to_pose(right_x, right_y, self.right_z_free)
-                    action_right = RIGHT_BEFORE_PLAY
+                        if frame_right < frame_len:
+                            right_ready[frame_right] = True
+                            frame_right += 1
 
-                elif action_right == RIGHT_BEFORE_PLAY:
-                    self.right_arm.go_to_pose(right_x, right_y, right_z_down)
-                    action_right = RIGHT_AFTER_PLAY
-
-                elif action_right == RIGHT_AFTER_PLAY:
+                elif action_right == RIGHT_PRESS:
+                    right_ready[frame_right] = True
                     if left_ready[frame_right]:
-                        right_string = strings[frame_right]
-                        if pose_right >= right_string:
-                            pose_right = right_string - 0.1
-                            right_x, right_y, _ = self.get_right_pose(pose_right, grades[frame_right])
-                        else:
-                            pose_right = right_string + 0.1
-                            right_x, right_y, _ = self.get_right_pose(pose_right, grades[frame_right])
-                        # time.sleep(0.1)
-                        et = time.time()
-                        dt = et - start_time
-                        print(f"frame {frame_right - 1}: time: {dt}")
-                        frame_time = 1.2 * beats[frame_right - 1]
-                        if frame_time - dt > 0:
-                            time.sleep(frame_time - dt)
-                        start_time = time.time()
-                        self.right_arm.go_to_pose(right_x, right_y, right_z_down)
+                        if not timewait[frame_right]:
+                            et = time.time()
+                            dt = et - start_time
+                            print(f"frame {frame_left - 1}: time: {dt}")
+                            frame_time = 1.2 * beats[frame_left - 1]
+                            if frame_time - dt > 0:
+                                time.sleep(frame_time - dt)
+                            start_time = time.time()
+                            timewait[frame_right] = True
+                        self.right_arm.go_to_pose(right_x, right_y, self.right_z_pressed)
                         action_right = RIGHT_UP
 
                 elif action_right == RIGHT_UP:
                     self.right_arm.go_to_pose(right_x, right_y, self.right_z_free)
-                    action_right = RIGHT_MOVE
                     frame_right += 1
+                    action_right = RIGHT_MOVE
 
             left_res, right_res = self.wait_for_action_end_or_abort()
 
