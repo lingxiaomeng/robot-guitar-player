@@ -8,7 +8,7 @@ from kortex_driver.msg import BaseCyclic_Feedback, ActionEvent
 from robot_api import Robot_Api
 
 import rospy
-from state import *
+from guitar_state import *
 
 
 class Main:

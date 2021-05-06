@@ -85,6 +85,11 @@ class Robot_Api:
             self.dx = 0
             self.dy = 0
 
+    def arm_init(self):
+        self.example_clear_faults()
+        self.example_subscribe_to_a_robot_notification()
+        self.example_set_cartesian_reference_frame()
+
     def cb_action_topic(self, notif):
         self.last_action_notif_type = notif.action_event
 
@@ -177,6 +182,22 @@ class Robot_Api:
         # print("theta z %f" % feedback.base.commanded_tool_pose_theta_z)
 
         return feedback.base.commanded_tool_pose_x, feedback.base.commanded_tool_pose_y, feedback.base.commanded_tool_pose_z
+
+    def get_efforts(self):
+        feedback = rospy.wait_for_message("/" + self.robot_name + "/base_feedback", BaseCyclic_Feedback)
+        # print(feedback)
+        torque = []
+        for i in range(0, 6):
+            torque.append(feedback.actuators[i].torque)
+        return torque
+
+    def get_joint_positions(self):
+        feedback = rospy.wait_for_message("/" + self.robot_name + "/base_feedback", BaseCyclic_Feedback)
+        # print(feedback)
+        position = []
+        for i in range(0, 6):
+            position.append(feedback.actuators[i].position)
+        return position
 
     def go_to_pose(self, x, y, z, speed=0.3, theta_x=0, theta_y=0, theta_z=0, theta_change=False):
         self.last_action_notif_type = None
