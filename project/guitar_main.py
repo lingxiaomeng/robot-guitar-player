@@ -18,9 +18,11 @@ class Main:
         self.right_arm = Robot_Api("my_right_arm")
         self.right_x6 = 0.292414
         self.right_y6 = -0.137629
+        self.right_z6 = 0
 
         self.left_x6 = 0.373
         self.left_y6 = -0.032
+        self.left_z6 = 0
 
         self.start_time = 0.0
         self.end_time = 0.0
@@ -35,6 +37,9 @@ class Main:
         self.left_grades = [0.03635, 0.03635 + 0.03431, 0.03635 + 0.03431 + 0.03239]
         self.left_strings = [0.028666, 0.028666, 0.014333, 0.014333, 0, 0]
 
+        self.right_strings_height = [-0.0019999444484710693, -0.0008000433444976807, -0.00010000169277191162
+            , 1.4901161193847656e-07, 0.00010000169277191162, 0]
+
         dis_string = 0.05292 / 5
         self.right_strings = [dis_string * 5, dis_string * 4, dis_string * 3, dis_string * 2, dis_string * 1, 0]
         self.left_z_pressed = 0.014
@@ -45,10 +50,15 @@ class Main:
         feedback = rospy.wait_for_message("/" + self.right_arm.robot_name + "/base_feedback", BaseCyclic_Feedback)
         self.right_x6 = feedback.base.commanded_tool_pose_x
         self.right_y6 = feedback.base.commanded_tool_pose_y
+        self.right_z6 = feedback.base.commanded_tool_pose_z
+        self.right_z_free = self.right_z6 + 0.002
 
         feedback = rospy.wait_for_message("/" + self.left_arm.robot_name + "/base_feedback", BaseCyclic_Feedback)
         self.left_x6 = feedback.base.commanded_tool_pose_x
         self.left_y6 = feedback.base.commanded_tool_pose_y
+        self.left_y6 = feedback.base.commanded_tool_pose_z
+        self.left_z_free = self.left_z6
+        self.left_z_pressed = self.left_z6 - 0.01
 
     def finished(self):
         left_x, left_y, left_z = self.left_arm.get_pose()
@@ -78,7 +88,7 @@ class Main:
         k = -1 if pose > string else 1
         x = self.right_x6 + ((self.right_strings[string - 1] + k * right_dis_start) / cos135)
         y = self.right_y6 + ((self.right_strings[string - 1] + k * right_dis_start) / sin135)
-        z = self.right_z[string - 1] - 0.001 / 3 * grade
+        z = self.right_z6 + self.right_strings_height[string - 1] - 0.001 - 0.001 / 3 * grade
         print(f"right pose string:{string} x:{x} y:{y} z:{z}")
         return x, y, z
 

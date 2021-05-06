@@ -30,7 +30,7 @@ def test_arm(arm: Robot_Api):
         x, y, z = arm.get_pose()
         efforts = arm.get_efforts()
         joint_position = arm.get_joint_positions()
-
+        write_file(x, y, z, efforts, joint_position)
         print(f"x:{x} y:{y} z:{z}")
         delta = 0.0001
         if (a == 'w'):
@@ -68,8 +68,14 @@ def test_arm(arm: Robot_Api):
         elif (a == 'q'):
             arm.go_to_pose(x, y, z + delta)
             arm.wait_for_action_end_or_abort()
+        elif (a == 'Q'):
+            arm.go_to_pose(x, y, z + delta * 10)
+            arm.wait_for_action_end_or_abort()
         elif (a == 'e'):
             arm.go_to_pose(x, y, z - delta)
+            arm.wait_for_action_end_or_abort()
+        elif (a == 'E'):
+            arm.go_to_pose(x, y, z - delta * 10)
             arm.wait_for_action_end_or_abort()
         elif (a == 'ok'):
             f.close()
@@ -80,9 +86,9 @@ def test_arm(arm: Robot_Api):
 if __name__ == "__main__":
     arm = Robot_Api("my_gen3_lite")
     arm.arm_init()
-    arm.go_to_pose(0.373, -0.032, 0.045, theta_x=0, theta_y=180,
-                   theta_z=45, theta_change=True)
-    arm.wait_for_action_end_or_abort()
+    # arm.go_to_pose(0.373, -0.032, 0.045, theta_x=0, theta_y=180,
+    #                theta_z=45, theta_change=True)
+    # arm.wait_for_action_end_or_abort()
     test_arm(arm)
 
 #
